@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>To-Do API - Frontend</title>
+  <style>
+    body { font-family: Segoe UI, Arial; background:#f6f7fb; margin:0; padding:20px; display:flex; justify-content:center; }
+    .card { background:white; width:100%; max-width:520px; padding:24px; border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,.08); }
+    h2 { margin:0 0 12px; }
+    .row { display:flex; gap:8px; margin-bottom:16px; }
+    input { flex:1; padding:12px; border:1px solid #ddd; border-radius:10px; }
+    button { padding:12px 16px; border:0; border-radius:10px; cursor:pointer; }
+    .add { background:#000; color:#fff; }
+    li { list-style:none; display:flex; align-items:center; justify-content:space-between; background:#fafafa; padding:10px 12px; border-radius:10px; margin-bottom:8px; }
+    ul { padding:0; }
+    .done span { text-decoration:line-through; opacity:.6; }
+    .actions { display:flex; gap:6px; }
+    .check { background:#e8f5e9; }
+    .del { background:#ffebee; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h2>✅ To-Do App</h2>
+  <p style="color:#666;font-size:14px">Backend: http://localhost:3000/tasks</p>
+  <div class="row">
+    <input id="title" placeholder="Add new task... e.g., Complete backend practice" />
+    <button class="add" onclick="createTask()">Add</button>
+  </div>
+  <ul id="list"></ul>
+</div>
+
+<script>
+const API = 'http://localhost:3000/tasks';
+
+async function loadTasks() {
+  const res = await fetch(API);
+  const tasks = await res.json();
+  const list = document.getElementById('list');
+  list.innerHTML = tasks.map(t => `
+    <li class="${t.completed ? 'done' : ''}">
+      <span onclick="toggle(${t.id}, ${t.completed})" style="cursor:pointer; flex:1">${t.completed ? '✅' : '⬜'} ${t.title}</span>
+      <div class="actions">
+        <button class="check" onclick="toggle(${t.id}, ${t.completed})">${t.completed ? 'Undo' : 'Done'}</button>
+        <button class="del" onclick="deleteTask(${t.id})">Delete</button>
+      </div>
+    </li>
+  `).join('') || '<p style="color:#999">No tasks yet</p>';
+}
+
+async function createTask() {
+  const titleInput = document.getElementById('title');
+  const title = titleInput.value.trim();
+  if (!title) return alert('Title');
+  
+  await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title })
+  });
+  titleInput.value = '';
+  loadTasks();
+}
+
+// PATCH /tasks/:id
+async function toggle(id, current) {
+  await fetch(`${API}/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ completed: !current })
+  });
+  loadTasks();
+}
+
+// DELETE /tasks/:id
+async function deleteTask(id) {
+  if (!confirm('Delete ')) return;
+  await fetch(`${API}/${id}`, { method: 'DELETE' });
+  loadTasks();
+}
+
+loadTasks();
+</script>
+</body>
+</html>
