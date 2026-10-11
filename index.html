@@ -1,85 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>To-Do API - Frontend</title>
-  <style>
-    body { font-family: Segoe UI, Arial; background:#f6f7fb; margin:0; padding:20px; display:flex; justify-content:center; }
-    .card { background:white; width:100%; max-width:520px; padding:24px; border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,.08); }
-    h2 { margin:0 0 12px; }
-    .row { display:flex; gap:8px; margin-bottom:16px; }
-    input { flex:1; padding:12px; border:1px solid #ddd; border-radius:10px; }
-    button { padding:12px 16px; border:0; border-radius:10px; cursor:pointer; }
-    .add { background:#000; color:#fff; }
-    li { list-style:none; display:flex; align-items:center; justify-content:space-between; background:#fafafa; padding:10px 12px; border-radius:10px; margin-bottom:8px; }
-    ul { padding:0; }
-    .done span { text-decoration:line-through; opacity:.6; }
-    .actions { display:flex; gap:6px; }
-    .check { background:#e8f5e9; }
-    .del { background:#ffebee; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>To-Do App</title>
+<style>
+body { font-family: Arial; background: #f5f5f5; display: flex; justify-content: center; padding: 40px; }
+.container { background: white; width: 550px; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+h2 { margin: 0 0 10px 0; }
+.input-row { display: flex; gap: 10px; margin: 15px 0; }
+#taskInput { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
+.addBtn { background: #111; color: white; border: none; padding: 12px 18px; border-radius: 8px; cursor: pointer; }
+.task { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
+.task-left { display: flex; align-items: center; gap: 10px; }
+.completed { text-decoration: line-through; color: #888; }
+.btn { padding: 6px 10px; border: none; border-radius: 5px; cursor: pointer; margin-left: 5px; }
+.doneBtn { background: #e0e0e0; }
+.delBtn { background: #ff4d4d; color: white; }
+</style>
 </head>
 <body>
-<div class="card">
-  <h2>✅ To-Do App</h2>
-  <p style="color:#666;font-size:14px">Backend: http://localhost:3000/tasks</p>
-  <div class="row">
-    <input id="title" placeholder="Add new task... e.g., Complete backend practice" />
-    <button class="add" onclick="createTask()">Add</button>
-  </div>
-  <ul id="list"></ul>
+<div class="container">
+<h2>✅ To-Do App</h2>
+<small>Backend: http://localhost:3000/tasks</small>
+<div class="input-row">
+<input id="taskInput" type="text" placeholder="Add new task  e.g. Complete backend practice">
+<button class="addBtn" onclick="addTask()">Add</button>
+</div>
+<div id="list">Loading...</div>
 </div>
 
 <script>
 const API = 'http://localhost:3000/tasks';
 
-async function loadTasks() {
+async function load() {
   const res = await fetch(API);
   const tasks = await res.json();
-  const list = document.getElementById('list');
-  list.innerHTML = tasks.map(t => `
-    <li class="${t.completed ? 'done' : ''}">
-      <span onclick="toggle(${t.id}, ${t.completed})" style="cursor:pointer; flex:1">${t.completed ? '✅' : '⬜'} ${t.title}</span>
-      <div class="actions">
-        <button class="check" onclick="toggle(${t.id}, ${t.completed})">${t.completed ? 'Undo' : 'Done'}</button>
-        <button class="del" onclick="deleteTask(${t.id})">Delete</button>
+  const listDiv = document.getElementById('list');
+  
+  if (tasks.length === 0) {
+    listDiv.innerHTML = '<p style="color:gray; text-align:center; margin-top:20px;">No tasks yet. Add one!</p>';
+    return;
+  }
+
+  listDiv.innerHTML = tasks.map(t => `
+    <div class="task">
+      <div class="task-left">
+        <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleDone(${t.id})">
+        <span class="${t.completed ? 'completed' : ''}">${t.title}</span>
       </div>
-    </li>
-  `).join('') || '<p style="color:#999">No tasks yet</p>';
+      <div>
+        <button class="btn doneBtn" onclick="toggleDone(${t.id})">${t.completed ? 'Undo' : 'Done'}</button>
+        <button class="btn delBtn" onclick="deleteTask(${t.id})">Delete</button>
+      </div>
+    </div>
+  `).join('');
 }
 
-async function createTask() {
-  const titleInput = document.getElementById('title');
-  const title = titleInput.value.trim();
-  if (!title) return alert('Title');
+async function addTask() {
+  const input = document.getElementById('taskInput');
+  const title = input.value.trim();
+  if (!title) return alert('Please enter task');
   
   await fetch(API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title })
+    body: JSON.stringify({ title: title })
   });
-  titleInput.value = '';
-  loadTasks();
+  input.value = '';
+  load();
 }
 
-// PATCH /tasks/:id
-async function toggle(id, current) {
-  await fetch(`${API}/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ completed: !current })
-  });
-  loadTasks();
+async function toggleDone(id) {
+  await fetch(`${API}/${id}`, { method: 'PUT' });
+  load();
 }
 
-// DELETE /tasks/:id
 async function deleteTask(id) {
-  if (!confirm('Delete ')) return;
   await fetch(`${API}/${id}`, { method: 'DELETE' });
-  loadTasks();
+  load();
 }
 
-loadTasks();
+// Load on start
+load();
 </script>
 </body>
 </html>

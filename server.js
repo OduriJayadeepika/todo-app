@@ -8,42 +8,53 @@
 
 const express = require('express');
 const cors = require('cors');
-const path=require('path');
-
-
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname,'../public')));
+app.use(express.static(__dirname));
 
 let tasks = [];
+let idCounter = 1;
 
-// 1. THIS IS FOR BROWSER - Home page
-app.get('/', (req, res) => {
-  res.send(`
-    <h1>✅ Todo API is Running!</h1>
-    <p>Your backend is LIVE</p>
-    <ul>
-      <li><a href="/tasks">Click here to see Tasks - /tasks</a></li>
-    </ul>
-    <style> body{font-family:sans-serif; text-align:center; margin-top:50px} a{color:blue} </style>
-  `);
-});
-
-// 2. Get all tasks
+// GET
 app.get('/tasks', (req, res) => {
   res.json(tasks);
 });
 
-// 3. Add task
+// ADD
 app.post('/tasks', (req, res) => {
-  const task = { id: Date.now(), text: req.body.text };
-  tasks.push(task);
-  res.json(task);
+  const title = req.body.title || req.body.text;
+  if (!title) return res.status(400).json({error: "title required"});
+  const newTask = { id: idCounter++, title: title, completed: false };
+  tasks.push(newTask);
+  res.json(newTask);
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// DONE - Toggle
+app.put('/tasks/:id', (req, res) => {
+  const id = Number(req.params.id);
+  tasks = tasks.map(t => {
+    if (t.id === id) {
+      return { ...t, completed: !t.completed };
+    }
+    return t;
+  });
+  res.json({ message: "updated", tasks });
 });
+
+// DELETE
+app.delete('/tasks/:id', (req, res) => {
+  const id = Number(req.params.id);
+  tasks = tasks.filter(t => t.id !== id);
+  res.json({ message: "deleted", tasks });
+});
+
+// Frontend
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+const PORT = 3000;
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
